@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Island</string>
+    <string name="start_island">Start Island</string>
+    <string name="grant_permission">Grant Permissions</string>
+    <string name="album_art">Album Art</string>
+    <string name="play_pause">Play / Pause</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+</resources>
