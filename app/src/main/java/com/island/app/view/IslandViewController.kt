@@ -1,12 +1,16 @@
 package com.island.app.view
 
+import android.app.Notification
+import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import com.island.app.R
 import com.island.app.media.MediaSessionManager
@@ -16,6 +20,8 @@ class IslandViewController(
     private val expandedView: View,
     private val mediaSessionManager: MediaSessionManager
 ) {
+    private val context: Context = expandedView.context
+
     private val mediaCard: View = expandedView.findViewById(R.id.mediaCard)
     private val notificationCard: View = expandedView.findViewById(R.id.notificationCard)
 
@@ -30,6 +36,9 @@ class IslandViewController(
     private val tvNotifTitle: TextView = expandedView.findViewById(R.id.tvNotifTitle)
     private val tvNotifText: TextView = expandedView.findViewById(R.id.tvNotifText)
     private val ivNotifIcon: ImageView = expandedView.findViewById(R.id.ivNotifIcon)
+    private val layoutActions: LinearLayout = expandedView.findViewById(R.id.layoutActions)
+    private val btnAction1: Button = expandedView.findViewById(R.id.btnAction1)
+    private val btnAction2: Button = expandedView.findViewById(R.id.btnAction2)
 
     private val handler = Handler(Looper.getMainLooper())
     private val revertToMediaRunnable = Runnable { showMedia() }
@@ -63,10 +72,37 @@ class IslandViewController(
         } else {
             ivNotifIcon.visibility = View.GONE
         }
+
+        bindActionButton(btnAction1, data.actions.getOrNull(0), data.key)
+        bindActionButton(btnAction2, data.actions.getOrNull(1), data.key)
+        layoutActions.visibility =
+            if (data.actions.isNotEmpty()) View.VISIBLE else View.GONE
+
         mediaCard.visibility = View.GONE
         notificationCard.visibility = View.VISIBLE
         handler.removeCallbacks(revertToMediaRunnable)
         handler.postDelayed(revertToMediaRunnable, 4000)
+    }
+
+    private fun bindActionButton(
+        button: Button,
+        action: Notification.Action?,
+        notifKey: String
+    ) {
+        if (action == null) {
+            button.visibility = View.GONE
+            button.setOnClickListener(null)
+            return
+        }
+        button.visibility = View.VISIBLE
+        button.text = action.title ?: ""
+        button.setOnClickListener {
+            try {
+                action.actionIntent.send()
+            } catch (_: Exception) { }
+            IslandNotificationListener.cancelNotification(notifKey)
+            showMedia()
+        }
     }
 
     fun updateMedia(metadata: MediaMetadata?, playbackState: PlaybackState?) {

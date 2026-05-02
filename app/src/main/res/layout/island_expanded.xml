@@ -129,9 +129,46 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:maxLines="2"
+                android:maxLines="1"
                 android:textColor="@color/islandText"
                 android:textSize="12sp" />
+
+            <LinearLayout
+                android:id="@+id/layoutActions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/btnAction1"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="0dp"
+                    android:layout_height="28dp"
+                    android:layout_weight="1"
+                    android:textSize="10sp"
+                    android:textColor="@color/islandText"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
+
+                <Button
+                    android:id="@+id/btnAction2"
+                    style="@android:style/Widget.Material.Button.Borderless"
+                    android:layout_width="0dp"
+                    android:layout_height="28dp"
+                    android:layout_weight="1"
+                    android:textSize="10sp"
+                    android:textColor="@color/islandText"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
