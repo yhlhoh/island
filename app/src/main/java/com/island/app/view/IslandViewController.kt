@@ -29,6 +29,7 @@ class IslandViewController(
 
     private val tvNotifTitle: TextView = expandedView.findViewById(R.id.tvNotifTitle)
     private val tvNotifText: TextView = expandedView.findViewById(R.id.tvNotifText)
+    private val ivNotifIcon: ImageView = expandedView.findViewById(R.id.ivNotifIcon)
 
     private val handler = Handler(Looper.getMainLooper())
     private val revertToMediaRunnable = Runnable { showMedia() }
@@ -56,6 +57,12 @@ class IslandViewController(
     fun showNotification(data: IslandNotificationListener.NotificationData) {
         tvNotifTitle.text = data.title
         tvNotifText.text = data.text
+        if (data.icon != null) {
+            ivNotifIcon.setImageIcon(data.icon)
+            ivNotifIcon.visibility = View.VISIBLE
+        } else {
+            ivNotifIcon.visibility = View.GONE
+        }
         mediaCard.visibility = View.GONE
         notificationCard.visibility = View.VISIBLE
         handler.removeCallbacks(revertToMediaRunnable)

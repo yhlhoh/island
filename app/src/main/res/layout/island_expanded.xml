@@ -100,6 +100,14 @@
         android:gravity="center_vertical"
         android:visibility="gone">
 
+        <ImageView
+            android:id="@+id/ivNotifIcon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/notification_icon" />
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"

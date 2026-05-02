@@ -5,22 +5,32 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.PixelFormat
+import android.media.MediaMetadata
+import android.media.session.PlaybackState
 import android.os.IBinder
 import android.view.Gravity
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.ImageView
 import com.island.app.R
 import com.island.app.media.MediaSessionManager
 import com.island.app.view.IslandViewController
+import com.island.app.view.SoundWaveView
 
 class IslandOverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
-    private var overlayView: View? = null
     private var isExpanded = false
+
+    private var collapsedView: View? = null
+    private var expandedView: View? = null
+
+    private var collapsedSoundWave: SoundWaveView? = null
+    private var collapsedAlbumArt: ImageView? = null
+
     private lateinit var islandViewController: IslandViewController
     private lateinit var mediaSessionManager: MediaSessionManager
 
@@ -37,14 +47,28 @@ class IslandOverlayService : Service() {
         startForeground(NOTIFICATION_ID, buildForegroundNotification())
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        showCollapsedIsland()
+
+        val inflater = LayoutInflater.from(this)
+        collapsedView = inflater.inflate(R.layout.island_collapsed, null).also { view ->
+            collapsedSoundWave = view.findViewById(R.id.soundWaveCollapsed)
+            collapsedAlbumArt = view.findViewById(R.id.ivCollapsedAlbumArt)
+            view.setOnClickListener { toggleExpanded() }
+        }
+        expandedView = inflater.inflate(R.layout.island_expanded, null).also { view ->
+            view.setOnClickListener { toggleExpanded() }
+        }
 
         mediaSessionManager = MediaSessionManager(this)
+        islandViewController = IslandViewController(expandedView!!, mediaSessionManager)
+
         mediaSessionManager.init(object : MediaSessionManager.Callback {
-            override fun onMetadataChanged(metadata: android.media.MediaMetadata?) {
+            override fun onMetadataChanged(metadata: MediaMetadata?) {
+                updateCollapsedAlbumArt(metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART))
                 islandViewController.updateMedia(metadata, mediaSessionManager.getPlaybackState())
             }
-            override fun onPlaybackStateChanged(state: android.media.session.PlaybackState?) {
+            override fun onPlaybackStateChanged(state: PlaybackState?) {
+                val playing = state?.state == PlaybackState.STATE_PLAYING
+                collapsedSoundWave?.setPlaying(playing)
                 islandViewController.updateMedia(mediaSessionManager.getCurrentMetadata(), state)
             }
         })
@@ -55,52 +79,32 @@ class IslandOverlayService : Service() {
             }
             override fun onNotificationRemoved() {}
         })
+
+        windowManager.addView(collapsedView, buildLayoutParams(collapsedWidth, collapsedHeight))
     }
 
-    private fun showCollapsedIsland() {
-        val params = buildLayoutParams(collapsedWidth, collapsedHeight)
-        val view = LayoutInflater.from(this).inflate(R.layout.island_collapsed, null)
-        view.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP) {
-                toggleExpanded()
-            }
-            true
+    private fun updateCollapsedAlbumArt(bitmap: Bitmap?) {
+        if (bitmap != null) {
+            collapsedAlbumArt?.setImageBitmap(bitmap)
+        } else {
+            collapsedAlbumArt?.setImageResource(R.drawable.ic_play)
         }
-        overlayView = view
-        windowManager.addView(view, params)
-
-        val expandedView = LayoutInflater.from(this).inflate(R.layout.island_expanded, null)
-        islandViewController = IslandViewController(expandedView, mediaSessionManager)
     }
 
     private fun toggleExpanded() {
-        val view = overlayView ?: return
+        val collapsed = collapsedView ?: return
+        val expanded = expandedView ?: return
         if (!isExpanded) {
-            windowManager.removeView(view)
-            val expandedView = LayoutInflater.from(this).inflate(R.layout.island_expanded, null)
-            expandedView.setOnTouchListener { _, event ->
-                if (event.action == MotionEvent.ACTION_UP) {
-                    toggleExpanded()
-                }
-                true
-            }
-            islandViewController = IslandViewController(expandedView, mediaSessionManager)
-            val params = buildLayoutParams(expandedWidth, expandedHeight)
-            overlayView = expandedView
-            windowManager.addView(expandedView, params)
+            windowManager.removeView(collapsed)
+            windowManager.addView(expanded, buildLayoutParams(expandedWidth, expandedHeight))
+            islandViewController.updateMedia(
+                mediaSessionManager.getCurrentMetadata(),
+                mediaSessionManager.getPlaybackState()
+            )
             isExpanded = true
         } else {
-            windowManager.removeView(view)
-            val collapsedView = LayoutInflater.from(this).inflate(R.layout.island_collapsed, null)
-            collapsedView.setOnTouchListener { _, event ->
-                if (event.action == MotionEvent.ACTION_UP) {
-                    toggleExpanded()
-                }
-                true
-            }
-            val params = buildLayoutParams(collapsedWidth, collapsedHeight)
-            overlayView = collapsedView
-            windowManager.addView(collapsedView, params)
+            windowManager.removeView(expanded)
+            windowManager.addView(collapsed, buildLayoutParams(collapsedWidth, collapsedHeight))
             isExpanded = false
         }
     }
@@ -129,8 +133,10 @@ class IslandOverlayService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        overlayView?.let { windowManager.removeView(it) }
+        val current = if (isExpanded) expandedView else collapsedView
+        current?.let { if (it.isAttachedToWindow) windowManager.removeView(it) }
         mediaSessionManager.release()
+        IslandNotificationListener.setCallback(null)
     }
 
     private fun createNotificationChannel() {
@@ -144,12 +150,11 @@ class IslandOverlayService : Service() {
     }
 
     private fun buildForegroundNotification(): Notification {
-        val notification = Notification.Builder(this, CHANNEL_ID)
+        return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
             .setContentText("Island overlay is active")
             .setSmallIcon(R.drawable.ic_play)
             .build()
-        return notification
     }
 
     companion object {
